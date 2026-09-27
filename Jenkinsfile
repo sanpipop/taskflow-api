@@ -33,15 +33,17 @@ pipeline {
             steps {
                 sh 'npm test'
             }
+            post {
+                failure {
+                    echo "❌ Failed at stage: ${env.STAGE_NAME}"
+                }
+            }
         }
     }
 
     post {
         success {
             echo "✅ ${env.APP_NAME} passed on ${env.NODE_ENV}"
-        }
-        failure {
-            echo "❌ Failed at stage: ${env.STAGE_NAME}"
         }
         always {
             archiveArtifacts artifacts: 'npm-debug.log*', allowEmptyArchive: true
