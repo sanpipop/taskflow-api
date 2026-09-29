@@ -3,7 +3,7 @@ pipeline {
         docker {
             image 'taskflow-ci:node20-java17'
             label 'linux-build'
-            args '--network jenkins-net'
+            args '--network jenkins-net -v /var/run/docker.sock:/var/run/docker.sock --group-add 0'
         }
     }
 
@@ -57,7 +57,7 @@ pipeline {
                     image 'taskflow-playwright:1.63.0'
                     label 'linux-build'
                     reuseNode true
-                    args '--network jenkins-net -v /var/run/docker.sock:/var/run/docker.sock --ipc=host'
+                    args '--network jenkins-net -v /var/run/docker.sock:/var/run/docker.sock --group-add 0 --ipc=host'
                 }
             }
 

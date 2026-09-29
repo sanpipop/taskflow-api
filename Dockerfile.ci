@@ -2,7 +2,9 @@ FROM node:20-alpine
 
 USER root
 
-RUN apk add --no-cache openjdk17-jre
+RUN apk add --no-cache \
+    openjdk17-jre \
+    docker-cli
 
 ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk
 ENV PATH="${JAVA_HOME}/bin:${PATH}"
