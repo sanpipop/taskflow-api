@@ -1,7 +1,9 @@
 pipeline {
     agent {
         docker {
-            image 'node:20-alpine'
+            image 'taskflow-ci:node20-java17'
+            label 'linux-build'
+            args '--network jenkins-net'
         }
     }
 
