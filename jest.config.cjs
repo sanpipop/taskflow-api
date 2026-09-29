@@ -3,4 +3,6 @@ module.exports = {
   testEnvironment: 'node',
   roots: ['<rootDir>/test'],
   clearMocks: true,
+  coverageDirectory: 'coverage',
+  coverageReporters: ['text', 'cobertura'],
 };

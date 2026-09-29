@@ -31,14 +31,21 @@ pipeline {
 
         stage('Unit Test') {
             steps {
-                sh 'npm test'
+                sh 'npm test -- --coverage --reporters=jest-junit'
             }
             post {
+                always {
+                    junit 'reports/junit.xml'
+                    publishCoverage adapters: [
+                        coberturaAdapter('coverage/cobertura-coverage.xml')
+                    ]
+                }
                 failure {
                     echo "❌ Failed at stage: ${env.STAGE_NAME}"
                 }
             }
         }
+
 
         stage('Deploy - Staging') {
             when { branch 'develop' }
