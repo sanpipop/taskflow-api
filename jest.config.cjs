@@ -4,5 +4,5 @@ module.exports = {
   roots: ['<rootDir>/test'],
   clearMocks: true,
   coverageDirectory: 'coverage',
-  coverageReporters: ['text', 'cobertura'],
+  coverageReporters: ['text', 'cobertura', 'lcovonly']
 };
