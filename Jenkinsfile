@@ -36,9 +36,12 @@ pipeline {
             post {
                 always {
                     junit 'reports/junit.xml'
-                    publishCoverage adapters: [
-                        coberturaAdapter('coverage/cobertura-coverage.xml')
-                    ]
+                    recordCoverage(
+                        tools: [[
+                            parser: 'COBERTURA',
+                            pattern: 'coverage/cobertura-coverage.xml'
+                        ]]
+                    )
                 }
                 failure {
                     echo "❌ Failed at stage: ${env.STAGE_NAME}"
