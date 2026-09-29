@@ -51,6 +51,40 @@ pipeline {
             }
         }
 
+        stage('E2E') {
+            agent {
+                docker {
+                    image 'taskflow-playwright:1.63.0'
+                    label 'linux-build'
+                    reuseNode true
+                    args '--network jenkins-net -v /var/run/docker.sock:/var/run/docker.sock --ipc=host'
+                }
+            }
+
+            environment {
+                E2E_BASE_URL = 'http://taskflow-api-e2e:8080'
+            }
+
+            steps {
+                sh 'docker compose up -d --build --wait'
+                sh 'npm ci'
+                sh 'mkdir -p reports'
+                sh 'npx playwright test'
+            }
+
+            post {
+                always {
+                    sh 'docker compose down -v --remove-orphans || true'
+
+                    junit testResults: 'reports/e2e-junit.xml',
+                        allowEmptyResults: true
+
+                    archiveArtifacts artifacts: 'playwright-report/**',
+                                    allowEmptyArchive: true
+                }
+            }
+        }
+
         stage('SonarQube Analysis') {
             steps {
                 script {
