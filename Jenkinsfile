@@ -1,9 +1,8 @@
 pipeline {
     agent {
-        docker {
-            image 'taskflow-ci:node20-java17'
-            label 'linux-build'
-            args '--network jenkins-net -v /var/run/docker.sock:/var/run/docker.sock -v taskflow-kubeconfig:/kubeconfig:ro --group-add 0'
+        kubernetes {
+            inheritFrom 'k8s-node'
+            defaultContainer 'node'
         }
     }
 
@@ -28,9 +27,24 @@ pipeline {
     options {
         // Prevent a hung install/test from holding an executor forever.
         timeout(time: 10, unit: 'MINUTES')
+        skipDefaultCheckout(true)
     }
 
     stages {
+        stage('Kubernetes Agent') {
+            steps {
+                sh '''
+                    echo "Running on ephemeral Kubernetes agent: ${NODE_NAME}"
+                    echo "Pod namespace: jenkins-agents"
+                    node --version
+                    echo 'Holding the pod briefly so its lifecycle can be observed...'
+                    sleep 120
+                    apk add --no-cache git
+                '''
+                checkout scm
+            }
+        }
+
         stage('Install') {
             steps {
                 echo "Running ${env.APP_NAME} in ${env.NODE_ENV} mode"
