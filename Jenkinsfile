@@ -3,7 +3,7 @@ pipeline {
         docker {
             image 'taskflow-ci:node20-java17'
             label 'linux-build'
-            args '--network jenkins-net -v /var/run/docker.sock:/var/run/docker.sock --group-add 0'
+            args '--network jenkins-net -v /var/run/docker.sock:/var/run/docker.sock -v taskflow-kubeconfig:/kubeconfig:ro --group-add 0'
         }
     }
 
@@ -11,6 +11,7 @@ pipeline {
         APP_NAME = 'taskflow-api'
         NODE_ENV = 'test'
         LOCAL_REGISTRY = 'localhost:5001'
+        KUBECONFIG = '/kubeconfig/config'
     }
 
     options {
@@ -307,6 +308,91 @@ pipeline {
             post {
                 always {
                     archiveArtifacts artifacts: 'reports/trivy.sarif',
+                                     allowEmptyArchive: true
+                }
+            }
+        }
+
+        stage('Blue-Green Deploy') {
+            steps {
+                sh 'mkdir -p reports'
+                script {
+                    env.PREVIOUS_COLOR = sh(
+                        returnStdout: true,
+                        script: "kubectl get service taskflow -o jsonpath='{.spec.selector.color}'"
+                    ).trim()
+
+                    if (!(env.PREVIOUS_COLOR in ['blue', 'green'])) {
+                        error("Unexpected taskflow Service color: ${env.PREVIOUS_COLOR}")
+                    }
+
+                    env.NEXT_COLOR = env.PREVIOUS_COLOR == 'blue' ? 'green' : 'blue'
+
+                    sh '''
+                        set -eu
+
+                        echo "Current live environment: ${PREVIOUS_COLOR}"
+                        echo "Candidate environment: ${NEXT_COLOR}"
+
+                        kubectl get service taskflow -o yaml > reports/service-before.yaml
+
+                        kubectl set image \
+                          deployment/taskflow-${NEXT_COLOR} \
+                          app=${LOCAL_REGISTRY}/${APP_NAME}:${IMAGE_TAG}
+
+                        kubectl rollout status \
+                          deployment/taskflow-${NEXT_COLOR} \
+                          --timeout=120s
+
+                        candidate_ip=$(kubectl get pod \
+                          -l app=taskflow,color=${NEXT_COLOR} \
+                          -o jsonpath='{.items[0].status.podIP}')
+
+                        test -n "${candidate_ip}"
+
+                        kubectl run taskflow-smoke-${BUILD_NUMBER} \
+                          --rm -i \
+                          --restart=Never \
+                          --image=curlimages/curl:8.16.0 \
+                          --command -- \
+                          curl --fail --silent --show-error \
+                               --max-time 10 \
+                               http://${candidate_ip}:8080/health
+
+                        echo 'Candidate health check: PASSED'
+
+                        kubectl patch service taskflow \
+                          --type merge \
+                          -p "{\\"spec\\":{\\"selector\\":{\\"app\\":\\"taskflow\\",\\"color\\":\\"${NEXT_COLOR}\\"}}}"
+
+                        kubectl get service taskflow -o yaml > reports/service-after.yaml
+
+                        active_color=$(kubectl get service taskflow -o jsonpath='{.spec.selector.color}')
+                        test "${active_color}" = "${NEXT_COLOR}"
+
+                        echo "Switched traffic: ${PREVIOUS_COLOR} -> ${active_color}"
+                        kubectl get service taskflow \
+                          -o custom-columns='NAME:.metadata.name,COLOR:.spec.selector.color,PORT:.spec.ports[0].port'
+                    '''
+                }
+            }
+            post {
+                failure {
+                    script {
+                        if (env.PREVIOUS_COLOR in ['blue', 'green']) {
+                            sh '''
+                                kubectl patch service taskflow \
+                                  --type merge \
+                                  -p "{\\"spec\\":{\\"selector\\":{\\"app\\":\\"taskflow\\",\\"color\\":\\"${PREVIOUS_COLOR}\\"}}}"
+                                kubectl get service taskflow -o yaml > reports/service-rollback.yaml
+                                echo "Rollback completed: traffic restored to ${PREVIOUS_COLOR}"
+                            '''
+                        }
+                    }
+                }
+                always {
+                    sh 'kubectl delete pod taskflow-smoke-${BUILD_NUMBER} --ignore-not-found=true || true'
+                    archiveArtifacts artifacts: 'reports/service-*.yaml',
                                      allowEmptyArchive: true
                 }
             }
