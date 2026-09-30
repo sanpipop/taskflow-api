@@ -10,6 +10,7 @@ pipeline {
     environment {
         APP_NAME = 'taskflow-api'
         NODE_ENV = 'test'
+        LOCAL_REGISTRY = 'localhost:5001'
     }
 
     options {
@@ -266,6 +267,19 @@ pipeline {
             steps {
                 timeout(time: 5, unit: 'MINUTES') {
                     waitForQualityGate abortPipeline: true
+                }
+            }
+        }
+
+        stage('Build Image') {
+            steps {
+                script {
+                    env.IMAGE_TAG = env.GIT_COMMIT.take(7)
+
+                    sh "docker build -t ${env.APP_NAME}:${env.IMAGE_TAG} ."
+                    sh "docker tag ${env.APP_NAME}:${env.IMAGE_TAG} ${env.LOCAL_REGISTRY}/${env.APP_NAME}:${env.IMAGE_TAG}"
+                    sh "docker push ${env.LOCAL_REGISTRY}/${env.APP_NAME}:${env.IMAGE_TAG}"
+                    sh "docker image inspect ${env.LOCAL_REGISTRY}/${env.APP_NAME}:${env.IMAGE_TAG} --format='Built immutable image: {{index .RepoTags 0}}'"
                 }
             }
         }
