@@ -28,6 +28,7 @@ spec:
       args:
         - --host=tcp://0.0.0.0:2375
         - --insecure-registry=kind-registry:5000
+        - --insecure-registry=host.docker.internal:5001
 '''
         }
     }
@@ -36,7 +37,7 @@ spec:
         APP_NAME = 'taskflow-api'
         NODE_ENV = 'test'
         LOCAL_REGISTRY = 'localhost:5001'
-        PUSH_REGISTRY = 'kind-registry:5000'
+        PUSH_REGISTRY = 'host.docker.internal:5001'
         AWS_ACCESS_KEY_ID = 'test'
         AWS_SECRET_ACCESS_KEY = 'test'
         AWS_DEFAULT_REGION = 'us-east-1'
@@ -583,7 +584,7 @@ spec:
                 script {
                     env.PREVIOUS_COLOR = sh(
                         returnStdout: true,
-                        script: "kubectl get service taskflow -o jsonpath='{.spec.selector.color}'"
+                        script: "kubectl -n default get service taskflow -o jsonpath='{.spec.selector.color}'"
                     ).trim()
 
                     if (!(env.PREVIOUS_COLOR in ['blue', 'green'])) {
@@ -598,32 +599,32 @@ spec:
                         echo "Current live environment: ${PREVIOUS_COLOR}"
                         echo "Candidate environment: ${NEXT_COLOR}"
 
-                        kubectl get service taskflow -o yaml > reports/service-before.yaml
+                        kubectl -n default get service taskflow -o yaml > reports/service-before.yaml
 
-                        kubectl set image \
+                        kubectl -n default set image \
                           deployment/taskflow-${NEXT_COLOR} \
                           app=${LOCAL_REGISTRY}/${APP_NAME}:${IMAGE_TAG}
 
-                        kubectl rollout status \
+                        kubectl -n default rollout status \
                           deployment/taskflow-${NEXT_COLOR} \
                           --timeout=120s
 
-                        kubectl exec deployment/taskflow-${NEXT_COLOR} -- \
+                        kubectl -n default exec deployment/taskflow-${NEXT_COLOR} -- \
                           node -e "fetch('http://127.0.0.1:8080/health').then(async response => { console.log(await response.text()); if (!response.ok) process.exit(1) }).catch(error => { console.error(error); process.exit(1) })"
 
                         echo 'Candidate health check: PASSED'
 
-                        kubectl patch service taskflow \
+                        kubectl -n default patch service taskflow \
                           --type merge \
                           -p "{\\"spec\\":{\\"selector\\":{\\"app\\":\\"taskflow\\",\\"color\\":\\"${NEXT_COLOR}\\"}}}"
 
-                        kubectl get service taskflow -o yaml > reports/service-after.yaml
+                        kubectl -n default get service taskflow -o yaml > reports/service-after.yaml
 
-                        active_color=$(kubectl get service taskflow -o jsonpath='{.spec.selector.color}')
+                        active_color=$(kubectl -n default get service taskflow -o jsonpath='{.spec.selector.color}')
                         test "${active_color}" = "${NEXT_COLOR}"
 
                         echo "Switched traffic: ${PREVIOUS_COLOR} -> ${active_color}"
-                        kubectl get service taskflow \
+                        kubectl -n default get service taskflow \
                           -o custom-columns='NAME:.metadata.name,COLOR:.spec.selector.color,PORT:.spec.ports[0].port'
                     '''
                 }
@@ -633,10 +634,10 @@ spec:
                     script {
                         if (env.PREVIOUS_COLOR in ['blue', 'green']) {
                             sh '''
-                                kubectl patch service taskflow \
+                                kubectl -n default patch service taskflow \
                                   --type merge \
                                   -p "{\\"spec\\":{\\"selector\\":{\\"app\\":\\"taskflow\\",\\"color\\":\\"${PREVIOUS_COLOR}\\"}}}"
-                                kubectl get service taskflow -o yaml > reports/service-rollback.yaml
+                                kubectl -n default get service taskflow -o yaml > reports/service-rollback.yaml
                                 echo "Rollback completed: traffic restored to ${PREVIOUS_COLOR}"
                             '''
                         }
