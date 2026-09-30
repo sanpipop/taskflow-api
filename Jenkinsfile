@@ -61,6 +61,13 @@ spec:
         stage('Kubernetes Agent') {
             steps {
                 checkout scm
+                script {
+                    env.GIT_COMMIT = sh(
+                        returnStdout: true,
+                        script: 'git rev-parse HEAD'
+                    ).trim()
+                    echo "Checked out commit: ${env.GIT_COMMIT}"
+                }
                 sh '''
                     echo "Running on ephemeral Kubernetes agent: ${NODE_NAME}"
                     echo "Pod namespace: jenkins-agents"
