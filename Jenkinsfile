@@ -25,6 +25,24 @@ pipeline {
             }
         }
 
+        stage('Secrets Detection') {
+            steps {
+                sh 'mkdir -p reports'
+                sh '''
+                    gitleaks git . \
+                      --report-format sarif \
+                      --report-path reports/gitleaks.sarif \
+                      --redact
+                '''
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: 'reports/gitleaks.sarif',
+                                     allowEmptyArchive: true
+                }
+            }
+        }
+
         stage('Lint') {
             steps {
                 sh 'npm run lint'
