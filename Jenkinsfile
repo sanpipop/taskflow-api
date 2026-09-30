@@ -53,7 +53,7 @@ spec:
 
     options {
         // Prevent a hung install/test from holding an executor forever.
-        timeout(time: 10, unit: 'MINUTES')
+        timeout(time: 30, unit: 'MINUTES')
         skipDefaultCheckout(true)
     }
 
