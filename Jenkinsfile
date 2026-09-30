@@ -116,6 +116,48 @@ pipeline {
             }
         }
 
+        stage('SBOM') {
+            steps {
+                sh 'mkdir -p reports'
+                sh '''
+                    set -eu
+                    key_prefix=/tmp/lab06-cosign
+                    trap 'rm -f "${key_prefix}.key" "${key_prefix}.pub"' EXIT
+
+                    syft scan dir:. \
+                      -o cyclonedx-json=reports/sbom.cdx.json
+
+                    jq -e '.bomFormat == "CycloneDX"' reports/sbom.cdx.json > /dev/null
+
+                    COSIGN_PASSWORD='' cosign generate-key-pair \
+                      --output-key-prefix "${key_prefix}"
+
+                    cp "${key_prefix}.pub" reports/sbom-signing.pub
+
+                    COSIGN_PASSWORD='' cosign sign-blob \
+                      --yes \
+                      --key "${key_prefix}.key" \
+                      --bundle reports/sbom.cdx.json.sig \
+                      reports/sbom.cdx.json
+
+                    cosign verify-blob \
+                      --key reports/sbom-signing.pub \
+                      --bundle reports/sbom.cdx.json.sig \
+                      reports/sbom.cdx.json
+
+                    jq -r '"SBOM summary: format=" + .bomFormat + ", specVersion=" + .specVersion + ", components=" + ((.components | length) | tostring)' \
+                      reports/sbom.cdx.json
+                '''
+            }
+            post {
+                always {
+                    sh 'rm -f /tmp/lab06-cosign.key /tmp/lab06-cosign.pub'
+                    archiveArtifacts artifacts: 'reports/sbom.cdx.json,reports/sbom.cdx.json.sig,reports/sbom-signing.pub',
+                                     allowEmptyArchive: true
+                }
+            }
+        }
+
         stage('Unit Test') {
             steps {
                 sh 'npm test -- --coverage --reporters=jest-junit'
