@@ -284,6 +284,34 @@ pipeline {
             }
         }
 
+        stage('Container Scan') {
+            steps {
+                sh 'mkdir -p reports'
+                sh '''
+                    trivy image \
+                      --scanners vuln \
+                      --exit-code 0 \
+                      --severity HIGH,CRITICAL \
+                      --format sarif \
+                      --output reports/trivy.sarif \
+                      ${APP_NAME}:${IMAGE_TAG}
+
+                    trivy image \
+                      --scanners vuln \
+                      --exit-code 1 \
+                      --severity HIGH,CRITICAL \
+                      --format table \
+                      ${APP_NAME}:${IMAGE_TAG}
+                '''
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: 'reports/trivy.sarif',
+                                     allowEmptyArchive: true
+                }
+            }
+        }
+
         stage('Deploy - Staging') {
             when { branch 'develop' }
             steps {
