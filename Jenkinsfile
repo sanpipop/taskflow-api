@@ -158,6 +158,43 @@ pipeline {
             }
         }
 
+        stage('Policy') {
+            steps {
+                sh 'mkdir -p reports'
+                sh '''
+                    set -eu
+
+                    opa check --strict policy
+                    opa test policy -v
+
+                    opa eval \
+                      --format json \
+                      --data policy/security.rego \
+                      --input reports/npm-audit.json \
+                      'data.security' > reports/opa-policy-result.json
+
+                    allowed=$(jq -r '.result[0].expressions[0].value.allow // false' reports/opa-policy-result.json)
+                    deny_count=$(jq -r '(.result[0].expressions[0].value.deny // []) | length' reports/opa-policy-result.json)
+
+                    echo "Policy summary: allow=${allowed}, deny_count=${deny_count}"
+
+                    if [ "${allowed}" != 'true' ]; then
+                      echo 'POLICY GATE: BLOCKED'
+                      jq -r '.result[0].expressions[0].value.deny[]?' reports/opa-policy-result.json
+                      exit 1
+                    fi
+
+                    echo 'POLICY GATE: PASSED'
+                '''
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: 'reports/opa-policy-result.json',
+                                     allowEmptyArchive: true
+                }
+            }
+        }
+
         stage('Unit Test') {
             steps {
                 sh 'npm test -- --coverage --reporters=jest-junit'
