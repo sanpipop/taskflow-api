@@ -213,8 +213,17 @@ spec:
             post {
                 always {
                     sh 'rm -f /tmp/lab06-cosign.key /tmp/lab06-cosign.pub'
-                    archiveArtifacts artifacts: 'reports/sbom.cdx.json,reports/sbom.cdx.json.sig,reports/sbom-signing.pub',
-                                     allowEmptyArchive: true
+                    sh '''
+                        chmod 0644 reports/sbom.cdx.json reports/sbom.cdx.json.sig reports/sbom-signing.pub
+                        sync
+                        test -s reports/sbom.cdx.json
+                        test -s reports/sbom.cdx.json.sig
+                        test -s reports/sbom-signing.pub
+                    '''
+                    retry(3) {
+                        archiveArtifacts artifacts: 'reports/sbom.cdx.json,reports/sbom.cdx.json.sig,reports/sbom-signing.pub',
+                                         allowEmptyArchive: true
+                    }
                 }
             }
         }
