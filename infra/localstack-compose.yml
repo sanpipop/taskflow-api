@@ -11,7 +11,7 @@ services:
     networks:
       - jenkins-net
     healthcheck:
-      test: ["CMD", "awslocal", "s3api", "head-bucket", "--bucket", "taskflow-lab08-state"]
+      test: ["CMD", "awslocal", "s3api", "list-buckets"]
       interval: 5s
       timeout: 3s
       retries: 20

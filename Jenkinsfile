@@ -350,6 +350,7 @@ pipeline {
                     mkdir -p reports infra/ansible
 
                     docker compose -f infra/localstack-compose.yml up -d --wait
+                    docker exec taskflow-localstack sh /etc/localstack/init/ready.d/init-aws.sh
 
                     rm -f infra/ansible/.lab08_ssh infra/ansible/.lab08_ssh.pub
                     ssh-keygen -q -t ed25519 -N '' -f infra/ansible/.lab08_ssh
@@ -473,6 +474,7 @@ pipeline {
                     set -eu
                     mkdir -p reports infra/ansible
                     docker compose -f infra/localstack-compose.yml up -d --wait
+                    docker exec taskflow-localstack sh /etc/localstack/init/ready.d/init-aws.sh
                     terraform -chdir=infra/terraform init -reconfigure
 
                     if [ ! -f infra/ansible/.lab08_ssh.pub ]; then
