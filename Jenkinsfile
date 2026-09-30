@@ -63,6 +63,59 @@ pipeline {
             }
         }
 
+        stage('SCA') {
+            steps {
+                sh 'mkdir -p reports'
+                script {
+                    def scaStatus = sh(
+                        returnStatus: true,
+                        script: '''
+                            set +e
+                            npm audit --audit-level=high --json > reports/npm-audit.json
+                            audit_exit=$?
+                            set -e
+
+                            if ! jq -e '.metadata.vulnerabilities | type == "object"' reports/npm-audit.json > /dev/null; then
+                              echo 'ERROR: npm audit did not produce a valid vulnerability summary.'
+                              exit 3
+                            fi
+
+                            critical=$(jq -r '.metadata.vulnerabilities.critical // 0' reports/npm-audit.json)
+                            high=$(jq -r '.metadata.vulnerabilities.high // 0' reports/npm-audit.json)
+                            moderate=$(jq -r '.metadata.vulnerabilities.moderate // 0' reports/npm-audit.json)
+                            low=$(jq -r '.metadata.vulnerabilities.low // 0' reports/npm-audit.json)
+                            total=$(jq -r '.metadata.vulnerabilities.total // 0' reports/npm-audit.json)
+
+                            echo "SCA summary: critical=${critical}, high=${high}, moderate=${moderate}, low=${low}, total=${total}"
+
+                            if [ "${critical}" -gt 0 ]; then
+                              echo 'ERROR: Critical vulnerabilities detected.'
+                              exit 2
+                            fi
+
+                            if [ "${audit_exit}" -ne 0 ]; then
+                              echo 'WARNING: npm audit reported high-severity vulnerabilities, but no critical vulnerabilities.'
+                            fi
+                        '''
+                    )
+
+                    if (scaStatus == 2) {
+                        catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
+                            error('SCA blocked: Critical vulnerabilities detected. Continuing only so the Policy Gate can evaluate the same report.')
+                        }
+                    } else if (scaStatus != 0) {
+                        error("SCA execution failed with exit code ${scaStatus}")
+                    }
+                }
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: 'reports/npm-audit.json',
+                                     allowEmptyArchive: true
+                }
+            }
+        }
+
         stage('Unit Test') {
             steps {
                 sh 'npm test -- --coverage --reporters=jest-junit'
