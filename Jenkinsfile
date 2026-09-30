@@ -59,6 +59,7 @@ spec:
     stages {
         stage('Kubernetes Agent') {
             steps {
+                checkout scm
                 sh '''
                     echo "Running on ephemeral Kubernetes agent: ${NODE_NAME}"
                     echo "Pod namespace: jenkins-agents"
@@ -72,9 +73,12 @@ spec:
                     done
                     docker version
                     docker network inspect jenkins-net > /dev/null 2>&1 || docker network create jenkins-net
+                    docker build \
+                      --file Dockerfile.playwright \
+                      --tag taskflow-playwright:1.63.0 \
+                      .
                     echo 'Kubernetes agent and Docker sidecar are ready.'
                 '''
-                checkout scm
             }
         }
 
