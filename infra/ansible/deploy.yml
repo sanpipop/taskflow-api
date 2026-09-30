@@ -8,11 +8,9 @@
 
   tasks:
     - name: Install Node.js and Docker CLI
-      ansible.builtin.package:
-        name:
-          - nodejs
-          - docker-cli
-        state: present
+      ansible.builtin.raw: apk add --no-cache nodejs npm docker-cli
+      register: apk_install
+      changed_when: "'Installing' in apk_install.stdout"
 
     - name: Pull the immutable application image
       ansible.builtin.command: "docker pull {{ app_image }}"
