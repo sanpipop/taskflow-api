@@ -329,7 +329,11 @@ spec:
                     def scannerHome = tool 'SonarScanner'
 
                     withSonarQubeEnv('SonarQube') {
-                        sh "${scannerHome}/bin/sonar-scanner -Dsonar.projectKey=taskflow-api"
+                        sh """
+                            ${scannerHome}/bin/sonar-scanner \
+                              -Dsonar.projectKey=taskflow-api \
+                              -Dsonar.host.url=http://host.docker.internal:9000
+                        """
                     }
                 }
             }
