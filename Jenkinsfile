@@ -2,21 +2,21 @@ pipeline {
     agent {
         kubernetes {
             inheritFrom 'k8s-node'
-            defaultContainer 'node'
+            defaultContainer 'ci'
             yaml '''
 apiVersion: v1
 kind: Pod
 spec:
   serviceAccountName: jenkins-agent
   containers:
-    - name: node
+    - name: ci
       image: taskflow-ci:node20-java17
       imagePullPolicy: IfNotPresent
       command: ["cat"]
       tty: true
       env:
         - name: DOCKER_HOST
-          value: tcp://localhost:2375
+          value: tcp://127.0.0.1:2375
     - name: dind
       image: docker:27-dind
       imagePullPolicy: IfNotPresent
@@ -63,13 +63,14 @@ spec:
                     echo "Running on ephemeral Kubernetes agent: ${NODE_NAME}"
                     echo "Pod namespace: jenkins-agents"
                     node --version
-                    for attempt in $(seq 1 30); do
+                    echo "Docker endpoint: ${DOCKER_HOST}"
+                    for attempt in $(seq 1 45); do
                       if docker info > /dev/null 2>&1; then
                         break
                       fi
                       sleep 2
                     done
-                    docker info > /dev/null
+                    docker version
                     docker network inspect jenkins-net > /dev/null 2>&1 || docker network create jenkins-net
                     echo 'Kubernetes agent and Docker sidecar are ready.'
                 '''
