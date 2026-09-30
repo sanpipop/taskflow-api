@@ -15,3 +15,15 @@ variable "enable_detailed_monitoring" {
   type        = bool
   default     = true
 }
+
+variable "localstack_endpoint" {
+  description = "LocalStack endpoint reachable from the Terraform process."
+  type        = string
+  default     = "http://taskflow-localstack:4566"
+}
+
+variable "docker_host" {
+  description = "Docker daemon endpoint used by the Docker provider."
+  type        = string
+  default     = "unix:///var/run/docker.sock"
+}

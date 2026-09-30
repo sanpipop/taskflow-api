@@ -420,11 +420,15 @@ spec:
                     rm -f infra/ansible/.lab08_ssh infra/ansible/.lab08_ssh.pub
                     ssh-keygen -q -t ed25519 -N '' -f infra/ansible/.lab08_ssh
 
-                    terraform -chdir=infra/terraform init -reconfigure
+                    terraform -chdir=infra/terraform init \
+                      -reconfigure \
+                      -backend-config=backend-kubernetes.hcl
                     terraform -chdir=infra/terraform plan \
                       -var="ssh_public_key=$(cat infra/ansible/.lab08_ssh.pub)" \
                       -var="image_tag=${GIT_COMMIT}" \
                       -var="enable_detailed_monitoring=false" \
+                      -var="localstack_endpoint=http://127.0.0.1:4566" \
+                      -var="docker_host=tcp://127.0.0.1:2375" \
                       -out=../../reports/lab08.tfplan
 
                     terraform -chdir=infra/terraform show \
@@ -542,7 +546,9 @@ spec:
                     docker compose -f infra/localstack-compose.yml up -d --wait
                     docker cp infra/localstack/init-aws.sh taskflow-localstack:/tmp/taskflow-init-aws.sh
                     docker exec taskflow-localstack sh /tmp/taskflow-init-aws.sh
-                    terraform -chdir=infra/terraform init -reconfigure
+                    terraform -chdir=infra/terraform init \
+                      -reconfigure \
+                      -backend-config=backend-kubernetes.hcl
 
                     if [ ! -f infra/ansible/.lab08_ssh.pub ]; then
                       ssh-keygen -q -t ed25519 -N '' -f infra/ansible/.lab08_ssh
@@ -552,7 +558,9 @@ spec:
                       -auto-approve \
                       -var="ssh_public_key=$(cat infra/ansible/.lab08_ssh.pub)" \
                       -var="image_tag=${GIT_COMMIT}" \
-                      -var="enable_detailed_monitoring=false"
+                      -var="enable_detailed_monitoring=false" \
+                      -var="localstack_endpoint=http://127.0.0.1:4566" \
+                      -var="docker_host=tcp://127.0.0.1:2375"
 
                     terraform -chdir=infra/terraform show -json > reports/terraform-after-destroy.json
 

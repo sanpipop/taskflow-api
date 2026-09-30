@@ -7,11 +7,11 @@ provider "aws" {
   skip_requesting_account_id  = true
 
   endpoints {
-    ec2 = "http://taskflow-localstack:4566"
-    iam = "http://taskflow-localstack:4566"
+    ec2 = var.localstack_endpoint
+    iam = var.localstack_endpoint
   }
 }
 
 provider "docker" {
-  host = "unix:///var/run/docker.sock"
+  host = var.docker_host
 }
