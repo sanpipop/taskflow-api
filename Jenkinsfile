@@ -345,7 +345,7 @@ pipeline {
                           --timeout=120s
 
                         kubectl exec deployment/taskflow-${NEXT_COLOR} -- \
-                          node -e "fetch('http://127.0.0.1:8080/health-lab07-failure').then(async response => { console.log(await response.text()); if (!response.ok) process.exit(1) }).catch(error => { console.error(error); process.exit(1) })"
+                          node -e "fetch('http://127.0.0.1:8080/health').then(async response => { console.log(await response.text()); if (!response.ok) process.exit(1) }).catch(error => { console.error(error); process.exit(1) })"
 
                         echo 'Candidate health check: PASSED'
 
