@@ -47,6 +47,7 @@ pipeline {
             steps {
                 sh 'mkdir -p reports'
                 sh 'npm run lint'
+                sh 'npx eslint "src/**/*.ts" "test/**/*.ts" --format @microsoft/eslint-formatter-sarif --output-file reports/eslint.sarif'
                 sh '''
                     semgrep scan \
                       --config p/owasp-top-ten \
@@ -57,7 +58,7 @@ pipeline {
             }
             post {
                 always {
-                    archiveArtifacts artifacts: 'reports/semgrep.sarif',
+                    archiveArtifacts artifacts: 'reports/eslint.sarif,reports/semgrep.sarif',
                                      allowEmptyArchive: true
                 }
             }
