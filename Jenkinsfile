@@ -25,9 +25,41 @@ pipeline {
             }
         }
 
-        stage('Lint') {
+        stage('Secrets Detection') {
             steps {
+                sh 'mkdir -p reports'
+                sh '''
+                    gitleaks git . \
+                      --report-format sarif \
+                      --report-path reports/gitleaks.sarif \
+                      --redact
+                '''
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: 'reports/gitleaks.sarif',
+                                     allowEmptyArchive: true
+                }
+            }
+        }
+
+        stage('SAST') {
+            steps {
+                sh 'mkdir -p reports'
                 sh 'npm run lint'
+                sh '''
+                    semgrep scan \
+                      --config p/owasp-top-ten \
+                      --config p/nodejs \
+                      --sarif \
+                      --output reports/semgrep.sarif
+                '''
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: 'reports/semgrep.sarif',
+                                     allowEmptyArchive: true
+                }
             }
         }
 

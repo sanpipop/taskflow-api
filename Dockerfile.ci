@@ -1,10 +1,37 @@
+FROM ghcr.io/gitleaks/gitleaks:v8.28.0 AS gitleaks
+FROM ghcr.io/anchore/syft:v1.52.0 AS syft
+FROM ghcr.io/sigstore/cosign/cosign:v3.1.3 AS cosign
+FROM openpolicyagent/opa:1.20.2-static AS opa
+
 FROM node:20-alpine
 
 USER root
 
 RUN apk add --no-cache \
+    docker-cli \
+    docker-cli-compose \
+    git \
+    jq \
     openjdk17-jre \
-    docker-cli
+    py3-pip \
+    python3 \
+    && python3 -m venv /opt/semgrep \
+    && /opt/semgrep/bin/pip install --no-cache-dir semgrep==1.178.0
+
+COPY --from=gitleaks /usr/bin/gitleaks /usr/local/bin/gitleaks
+COPY --from=syft /syft /usr/local/bin/syft
+COPY --from=cosign /ko-app/cosign /usr/local/bin/cosign
+COPY --from=opa /opa /usr/local/bin/opa
 
 ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk
-ENV PATH="${JAVA_HOME}/bin:${PATH}"
+ENV PATH="/opt/semgrep/bin:${JAVA_HOME}/bin:${PATH}"
+
+RUN gitleaks version \
+    && semgrep --version \
+    && jq --version \
+    && syft version \
+    && cosign version \
+    && opa version \
+    && docker --version \
+    && docker compose version \
+    && java -version
