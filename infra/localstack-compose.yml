@@ -3,7 +3,7 @@ services:
     image: localstack/localstack:4.9.2
     container_name: taskflow-localstack
     environment:
-      SERVICES: s3,ec2
+      SERVICES: s3,ec2,iam
       AWS_DEFAULT_REGION: us-east-1
     volumes:
       - ./localstack/init-aws.sh:/etc/localstack/init/ready.d/init-aws.sh:ro

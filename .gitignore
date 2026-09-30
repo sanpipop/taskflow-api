@@ -14,6 +14,5 @@ test-results/
 *.tfstate
 *.tfstate.*
 *.tfplan
-.terraform.lock.hcl
 infra/ansible/.lab08_ssh
 infra/ansible/.lab08_ssh.pub

@@ -8,6 +8,7 @@ provider "aws" {
 
   endpoints {
     ec2 = "http://taskflow-localstack:4566"
+    iam = "http://taskflow-localstack:4566"
   }
 }
 
