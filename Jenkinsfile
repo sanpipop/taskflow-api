@@ -344,20 +344,8 @@ pipeline {
                           deployment/taskflow-${NEXT_COLOR} \
                           --timeout=120s
 
-                        candidate_ip=$(kubectl get pod \
-                          -l app=taskflow,color=${NEXT_COLOR} \
-                          -o jsonpath='{.items[0].status.podIP}')
-
-                        test -n "${candidate_ip}"
-
-                        kubectl run taskflow-smoke-${BUILD_NUMBER} \
-                          --rm -i \
-                          --restart=Never \
-                          --image=curlimages/curl:8.16.0 \
-                          --command -- \
-                          curl --fail --silent --show-error \
-                               --max-time 10 \
-                               http://${candidate_ip}:8080/health
+                        kubectl exec deployment/taskflow-${NEXT_COLOR} -- \
+                          node -e "fetch('http://127.0.0.1:8080/health').then(async response => { console.log(await response.text()); if (!response.ok) process.exit(1) }).catch(error => { console.error(error); process.exit(1) })"
 
                         echo 'Candidate health check: PASSED'
 
@@ -391,7 +379,6 @@ pipeline {
                     }
                 }
                 always {
-                    sh 'kubectl delete pod taskflow-smoke-${BUILD_NUMBER} --ignore-not-found=true || true'
                     archiveArtifacts artifacts: 'reports/service-*.yaml',
                                      allowEmptyArchive: true
                 }
