@@ -1,3 +1,13 @@
+data "aws_ami" "taskflow" {
+  most_recent = true
+  owners      = ["self"]
+
+  filter {
+    name   = "name"
+    values = ["taskflow-lab08-ami"]
+  }
+}
+
 resource "aws_security_group" "taskflow" {
   name        = "taskflow-lab08"
   description = "Taskflow API access on port 8080"
@@ -50,7 +60,7 @@ resource "aws_iam_instance_profile" "taskflow" {
 }
 
 resource "aws_instance" "taskflow" {
-  ami                    = "ami-00000000000000000"
+  ami                    = data.aws_ami.taskflow.id
   instance_type          = "t3.micro"
   iam_instance_profile   = aws_iam_instance_profile.taskflow.name
   vpc_security_group_ids = [aws_security_group.taskflow.id]
