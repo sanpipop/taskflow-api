@@ -64,7 +64,7 @@ resource "aws_instance" "taskflow" {
   instance_type          = "t3.micro"
   iam_instance_profile   = aws_iam_instance_profile.taskflow.name
   vpc_security_group_ids = [aws_security_group.taskflow.id]
-  monitoring             = true
+  monitoring             = var.enable_detailed_monitoring
   ebs_optimized          = true
 
   root_block_device {

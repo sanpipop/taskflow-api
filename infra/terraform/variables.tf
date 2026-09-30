@@ -9,3 +9,9 @@ variable "image_tag" {
   type        = string
   default     = "lab08-plan-only"
 }
+
+variable "enable_detailed_monitoring" {
+  description = "Enable EC2 detailed monitoring. Disabled only for LocalStack Community, where MonitorInstances is not implemented."
+  type        = bool
+  default     = true
+}

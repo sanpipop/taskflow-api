@@ -360,6 +360,7 @@ pipeline {
                     terraform -chdir=infra/terraform plan \
                       -var="ssh_public_key=$(cat infra/ansible/.lab08_ssh.pub)" \
                       -var="image_tag=${GIT_COMMIT}" \
+                      -var="enable_detailed_monitoring=false" \
                       -out=../../reports/lab08.tfplan
 
                     terraform -chdir=infra/terraform show \
@@ -486,7 +487,8 @@ pipeline {
                     terraform -chdir=infra/terraform destroy \
                       -auto-approve \
                       -var="ssh_public_key=$(cat infra/ansible/.lab08_ssh.pub)" \
-                      -var="image_tag=${GIT_COMMIT}"
+                      -var="image_tag=${GIT_COMMIT}" \
+                      -var="enable_detailed_monitoring=false"
 
                     terraform -chdir=infra/terraform show -json > reports/terraform-after-destroy.json
 
