@@ -3,6 +3,32 @@ pipeline {
         kubernetes {
             inheritFrom 'k8s-node'
             defaultContainer 'node'
+            yaml '''
+apiVersion: v1
+kind: Pod
+spec:
+  serviceAccountName: jenkins-agent
+  containers:
+    - name: node
+      image: taskflow-ci:node20-java17
+      imagePullPolicy: IfNotPresent
+      command: ["cat"]
+      tty: true
+      env:
+        - name: DOCKER_HOST
+          value: tcp://localhost:2375
+    - name: dind
+      image: docker:27-dind
+      imagePullPolicy: IfNotPresent
+      securityContext:
+        privileged: true
+      env:
+        - name: DOCKER_TLS_CERTDIR
+          value: ""
+      args:
+        - --host=tcp://0.0.0.0:2375
+        - --insecure-registry=kind-registry:5000
+'''
         }
     }
 
@@ -10,7 +36,7 @@ pipeline {
         APP_NAME = 'taskflow-api'
         NODE_ENV = 'test'
         LOCAL_REGISTRY = 'localhost:5001'
-        KUBECONFIG = '/kubeconfig/config'
+        PUSH_REGISTRY = 'kind-registry:5000'
         AWS_ACCESS_KEY_ID = 'test'
         AWS_SECRET_ACCESS_KEY = 'test'
         AWS_DEFAULT_REGION = 'us-east-1'
@@ -37,9 +63,15 @@ pipeline {
                     echo "Running on ephemeral Kubernetes agent: ${NODE_NAME}"
                     echo "Pod namespace: jenkins-agents"
                     node --version
-                    echo 'Holding the pod briefly so its lifecycle can be observed...'
-                    sleep 120
-                    apk add --no-cache git
+                    for attempt in $(seq 1 30); do
+                      if docker info > /dev/null 2>&1; then
+                        break
+                      fi
+                      sleep 2
+                    done
+                    docker info > /dev/null
+                    docker network inspect jenkins-net > /dev/null 2>&1 || docker network create jenkins-net
+                    echo 'Kubernetes agent and Docker sidecar are ready.'
                 '''
                 checkout scm
             }
@@ -401,9 +433,9 @@ pipeline {
                     env.IMAGE_TAG = env.GIT_COMMIT.take(7)
 
                     sh "docker build -t ${env.APP_NAME}:${env.IMAGE_TAG} ."
-                    sh "docker tag ${env.APP_NAME}:${env.IMAGE_TAG} ${env.LOCAL_REGISTRY}/${env.APP_NAME}:${env.IMAGE_TAG}"
-                    sh "docker push ${env.LOCAL_REGISTRY}/${env.APP_NAME}:${env.IMAGE_TAG}"
-                    sh "docker image inspect ${env.LOCAL_REGISTRY}/${env.APP_NAME}:${env.IMAGE_TAG} --format='Built immutable image: {{index .RepoTags 0}}'"
+                    sh "docker tag ${env.APP_NAME}:${env.IMAGE_TAG} ${env.PUSH_REGISTRY}/${env.APP_NAME}:${env.IMAGE_TAG}"
+                    sh "docker push ${env.PUSH_REGISTRY}/${env.APP_NAME}:${env.IMAGE_TAG}"
+                    sh "docker image inspect ${env.PUSH_REGISTRY}/${env.APP_NAME}:${env.IMAGE_TAG} --format='Built immutable image: {{index .RepoTags 0}}'"
                 }
             }
         }
