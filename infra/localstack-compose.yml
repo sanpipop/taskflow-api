@@ -6,7 +6,6 @@ services:
       SERVICES: s3,ec2,iam
       AWS_DEFAULT_REGION: us-east-1
     volumes:
-      - ./localstack/init-aws.sh:/etc/localstack/init/ready.d/init-aws.sh:ro
       - taskflow-localstack-data:/var/lib/localstack
     networks:
       - jenkins-net
