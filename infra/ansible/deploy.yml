@@ -1,0 +1,77 @@
+---
+- name: Configure the Lab 08 compute host and deploy Taskflow
+  hosts: lab08
+  gather_facts: false
+  vars:
+    app_image: "localhost:5001/taskflow-api:{{ image_tag }}"
+    app_network: jenkins-net
+
+  tasks:
+    - name: Install Node.js and Docker CLI
+      ansible.builtin.package:
+        name:
+          - nodejs
+          - docker-cli
+        state: present
+
+    - name: Pull the immutable application image
+      ansible.builtin.command: "docker pull {{ app_image }}"
+      register: image_pull
+      changed_when: "'Downloaded newer image' in image_pull.stdout"
+
+    - name: Inspect the PostgreSQL container
+      ansible.builtin.command: docker inspect taskflow-lab08-postgres
+      register: postgres_inspect
+      changed_when: false
+      failed_when: false
+
+    - name: Start PostgreSQL when absent
+      ansible.builtin.command: >-
+        docker run -d --name taskflow-lab08-postgres
+        --network {{ app_network }}
+        -e POSTGRES_USER=taskflow
+        -e POSTGRES_PASSWORD=taskflow
+        -e POSTGRES_DB=taskflow
+        postgres:16-alpine
+      when: postgres_inspect.rc != 0
+      changed_when: true
+
+    - name: Wait for PostgreSQL readiness
+      ansible.builtin.command: >-
+        docker exec taskflow-lab08-postgres
+        pg_isready -U taskflow -d taskflow
+      register: postgres_ready
+      retries: 20
+      delay: 2
+      until: postgres_ready.rc == 0
+      changed_when: false
+
+    - name: Remove the previous Taskflow application container
+      ansible.builtin.command: docker rm -f taskflow-lab08-api
+      register: remove_app
+      changed_when: remove_app.rc == 0
+      failed_when: false
+
+    - name: Start Taskflow on port 8080
+      ansible.builtin.command: >-
+        docker run -d --name taskflow-lab08-api
+        --network {{ app_network }}
+        -e NODE_ENV=production
+        -e PORT=8080
+        -e DATABASE_URL=postgresql://taskflow:taskflow@taskflow-lab08-postgres:5432/taskflow
+        {{ app_image }}
+      changed_when: true
+
+    - name: Verify the deployed health endpoint
+      ansible.builtin.uri:
+        url: http://taskflow-lab08-api:8080/health
+        return_content: true
+        status_code: 200
+      register: health_result
+      retries: 20
+      delay: 2
+      until: health_result.status == 200
+
+    - name: Show deployed health result
+      ansible.builtin.debug:
+        msg: "Lab 08 deployment health: {{ health_result.content }}"

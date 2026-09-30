@@ -1,0 +1,24 @@
+services:
+  localstack:
+    image: localstack/localstack:4.9.2
+    container_name: taskflow-localstack
+    environment:
+      SERVICES: s3,ec2
+      AWS_DEFAULT_REGION: us-east-1
+    volumes:
+      - ./localstack/init-aws.sh:/etc/localstack/init/ready.d/init-aws.sh:ro
+      - taskflow-localstack-data:/var/lib/localstack
+    networks:
+      - jenkins-net
+    healthcheck:
+      test: ["CMD", "awslocal", "s3api", "head-bucket", "--bucket", "taskflow-lab08-state"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  taskflow-localstack-data:
+
+networks:
+  jenkins-net:
+    external: true

@@ -12,6 +12,17 @@ pipeline {
         NODE_ENV = 'test'
         LOCAL_REGISTRY = 'localhost:5001'
         KUBECONFIG = '/kubeconfig/config'
+        AWS_ACCESS_KEY_ID = 'test'
+        AWS_SECRET_ACCESS_KEY = 'test'
+        AWS_DEFAULT_REGION = 'us-east-1'
+    }
+
+    parameters {
+        choice(
+            name: 'LAB08_ACTION',
+            choices: ['PLAN', 'APPLY', 'DESTROY'],
+            description: 'Lab 08 lifecycle action. APPLY and DESTROY always require approval.'
+        )
     }
 
     options {
@@ -272,6 +283,101 @@ pipeline {
             }
         }
 
+        stage('IaC Lint & Validate') {
+            parallel {
+                stage('Terraform Validate') {
+                    steps {
+                        sh '''
+                            terraform -chdir=infra/terraform fmt -check -recursive
+                            terraform -chdir=infra/terraform init -backend=false
+                            terraform -chdir=infra/terraform validate
+                        '''
+                    }
+                }
+
+                stage('Ansible Lint') {
+                    steps {
+                        sh 'ansible-lint infra/ansible/deploy.yml'
+                    }
+                }
+            }
+        }
+
+        stage('IaC Security Scan') {
+            steps {
+                sh 'mkdir -p reports'
+                sh '''
+                    set +e
+
+                    tfsec infra/terraform --no-color > reports/tfsec.txt 2>&1
+                    tfsec_status=$?
+                    cat reports/tfsec.txt
+
+                    checkov \
+                      --directory infra/terraform \
+                      --framework terraform \
+                      --compact \
+                      --quiet > reports/checkov.txt 2>&1
+                    checkov_status=$?
+                    cat reports/checkov.txt
+
+                    set -e
+                    echo "IaC security summary: tfsec=${tfsec_status}, checkov=${checkov_status}"
+
+                    if [ "${tfsec_status}" -ne 0 ] || [ "${checkov_status}" -ne 0 ]; then
+                      echo 'IAC SECURITY GATE: BLOCKED'
+                      exit 1
+                    fi
+
+                    echo 'IAC SECURITY GATE: PASSED'
+                '''
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: 'reports/tfsec.txt,reports/checkov.txt',
+                                     allowEmptyArchive: true
+                }
+            }
+        }
+
+        stage('Terraform Plan') {
+            when {
+                expression { params.LAB08_ACTION in ['PLAN', 'APPLY'] }
+            }
+            steps {
+                sh '''
+                    set -eu
+                    mkdir -p reports infra/ansible
+
+                    docker compose -f infra/localstack-compose.yml up -d --wait
+
+                    rm -f infra/ansible/.lab08_ssh infra/ansible/.lab08_ssh.pub
+                    ssh-keygen -q -t ed25519 -N '' -f infra/ansible/.lab08_ssh
+
+                    terraform -chdir=infra/terraform init -reconfigure
+                    terraform -chdir=infra/terraform plan \
+                      -var="ssh_public_key=$(cat infra/ansible/.lab08_ssh.pub)" \
+                      -var="image_tag=${GIT_COMMIT}" \
+                      -out=../../reports/lab08.tfplan
+
+                    terraform -chdir=infra/terraform show \
+                      -no-color ../../reports/lab08.tfplan > reports/terraform-plan.txt
+
+                    terraform -chdir=infra/terraform show \
+                      -json ../../reports/lab08.tfplan > reports/terraform-plan.json
+
+                    echo 'Terraform plan summary:'
+                    grep -E '^Plan:|^Changes to Outputs:' reports/terraform-plan.txt || true
+                '''
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: 'reports/lab08.tfplan,reports/terraform-plan.txt,reports/terraform-plan.json',
+                                     allowEmptyArchive: true
+                }
+            }
+        }
+
         stage('Build Image') {
             steps {
                 script {
@@ -308,6 +414,86 @@ pipeline {
             post {
                 always {
                     archiveArtifacts artifacts: 'reports/trivy.sarif',
+                                     allowEmptyArchive: true
+                }
+            }
+        }
+
+        stage('Terraform Apply') {
+            when {
+                beforeInput true
+                expression { params.LAB08_ACTION == 'APPLY' }
+            }
+            input {
+                message 'Approve the reviewed Lab 08 Terraform plan and provision the infrastructure?'
+                ok 'Apply reviewed plan'
+            }
+            steps {
+                sh '''
+                    terraform -chdir=infra/terraform apply \
+                      -auto-approve ../../reports/lab08.tfplan
+
+                    terraform -chdir=infra/terraform output
+                '''
+            }
+        }
+
+        stage('Ansible Configure') {
+            when {
+                expression { params.LAB08_ACTION == 'APPLY' }
+            }
+            steps {
+                sh '''
+                    chmod 600 infra/ansible/.lab08_ssh
+                    chmod +x infra/ansible/inventory.sh
+
+                    ansible-inventory \
+                      -i infra/ansible/inventory.sh \
+                      --list
+
+                    ansible-playbook \
+                      -i infra/ansible/inventory.sh \
+                      infra/ansible/deploy.yml \
+                      -e "image_tag=${IMAGE_TAG}"
+                '''
+            }
+        }
+
+        stage('Terraform Destroy') {
+            when {
+                beforeInput true
+                expression { params.LAB08_ACTION == 'DESTROY' }
+            }
+            input {
+                message 'Destroy all infrastructure managed by Terraform for Lab 08?'
+                ok 'Destroy infrastructure'
+            }
+            steps {
+                sh '''
+                    set -eu
+                    mkdir -p reports infra/ansible
+                    docker compose -f infra/localstack-compose.yml up -d --wait
+                    terraform -chdir=infra/terraform init -reconfigure
+
+                    if [ ! -f infra/ansible/.lab08_ssh.pub ]; then
+                      ssh-keygen -q -t ed25519 -N '' -f infra/ansible/.lab08_ssh
+                    fi
+
+                    terraform -chdir=infra/terraform destroy \
+                      -auto-approve \
+                      -var="ssh_public_key=$(cat infra/ansible/.lab08_ssh.pub)" \
+                      -var="image_tag=${GIT_COMMIT}"
+
+                    terraform -chdir=infra/terraform show -json > reports/terraform-after-destroy.json
+
+                    managed_resources=$(jq '[.values.root_module.resources[]?] | length' reports/terraform-after-destroy.json)
+                    test "${managed_resources}" -eq 0
+                    echo 'Terraform destroy verified: 0 managed resources'
+                '''
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: 'reports/terraform-after-destroy.json',
                                      allowEmptyArchive: true
                 }
             }
