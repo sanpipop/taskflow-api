@@ -111,6 +111,10 @@ spec:
             steps {
                 sh 'mkdir -p reports'
                 sh '''
+                    git config --global --add safe.directory "$WORKSPACE"
+                    commit_count=$(git rev-list --count HEAD)
+                    test "${commit_count}" -gt 0
+                    echo "Gitleaks will scan ${commit_count} Git commits."
                     gitleaks git . \
                       --report-format sarif \
                       --report-path reports/gitleaks.sarif \
