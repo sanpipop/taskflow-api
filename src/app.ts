@@ -10,7 +10,7 @@ export function createApp(
   app.use(express.json());
 
   app.get("/health", (_req: Request, res: Response) => {
-    res.status(200).json({ status: "ok" });
+    res.status(200).json({ status: "ok", service: "taskflow-api", });
   });
 
   app.get("/ready", async (_req: Request, res: Response) => {
