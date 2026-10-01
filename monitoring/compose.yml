@@ -34,6 +34,16 @@ services:
       - prometheus
     restart: unless-stopped
 
+  mailpit:
+    image: axllent/mailpit:v1.27
+    container_name: taskflow-mailpit
+    ports:
+      - "8025:8025"
+      - "1025:1025"
+    networks:
+      - jenkins-net
+    restart: unless-stopped
+
 volumes:
   prometheus-data:
   grafana-data:

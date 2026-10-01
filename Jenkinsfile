@@ -41,6 +41,11 @@ spec:
         AWS_ACCESS_KEY_ID = 'test'
         AWS_SECRET_ACCESS_KEY = 'test'
         AWS_DEFAULT_REGION = 'us-east-1'
+        PROMETHEUS_URL = 'http://host.docker.internal:9090'
+        NOTIFY_SMTP_HOST = 'host.docker.internal'
+        NOTIFY_SMTP_PORT = '1025'
+        NOTIFY_EMAIL_FROM = 'jenkins@taskflow.local'
+        NOTIFY_EMAIL_TO = 'devops@taskflow.local'
     }
 
     parameters {
@@ -48,6 +53,11 @@ spec:
             name: 'LAB08_ACTION',
             choices: ['PLAN', 'APPLY', 'DESTROY'],
             description: 'Lab 08 lifecycle action. APPLY and DESTROY always require approval.'
+        )
+        string(
+            name: 'HEALTH_GATE_THRESHOLD',
+            defaultValue: '90',
+            description: 'Minimum rolling one-hour Jenkins build success percentage required before production deploy.'
         )
     }
 
@@ -94,7 +104,10 @@ spec:
             }
         }
 
-        stage('Secrets Detection') {
+        stage('Parallel Quality & Security Checks') {
+            failFast true
+            parallel {
+                stage('Secrets Detection') {
             steps {
                 sh 'mkdir -p reports'
                 sh '''
@@ -112,7 +125,7 @@ spec:
             }
         }
 
-        stage('SAST') {
+                stage('SAST') {
             steps {
                 sh 'mkdir -p reports'
                 sh 'npm run lint'
@@ -133,7 +146,7 @@ spec:
             }
         }
 
-        stage('SCA') {
+                stage('SCA') {
             steps {
                 sh 'mkdir -p reports'
                 script {
@@ -186,7 +199,7 @@ spec:
             }
         }
 
-        stage('SBOM') {
+                stage('SBOM') {
             steps {
                 sh 'mkdir -p reports'
                 sh '''
@@ -235,6 +248,28 @@ spec:
                     }
                 }
             }
+                }
+
+                stage('Unit Test') {
+                    steps {
+                        sh 'npm test -- --coverage --reporters=jest-junit'
+                    }
+                    post {
+                        always {
+                            junit 'reports/junit.xml'
+                            recordCoverage(
+                                tools: [[
+                                    parser: 'COBERTURA',
+                                    pattern: 'coverage/cobertura-coverage.xml'
+                                ]]
+                            )
+                        }
+                        failure {
+                            echo "❌ Failed at stage: ${env.STAGE_NAME}"
+                        }
+                    }
+                }
+            }
         }
 
         stage('Policy') {
@@ -270,26 +305,6 @@ spec:
                 always {
                     archiveArtifacts artifacts: 'reports/opa-policy-result.json',
                                      allowEmptyArchive: true
-                }
-            }
-        }
-
-        stage('Unit Test') {
-            steps {
-                sh 'npm test -- --coverage --reporters=jest-junit'
-            }
-            post {
-                always {
-                    junit 'reports/junit.xml'
-                    recordCoverage(
-                        tools: [[
-                            parser: 'COBERTURA',
-                            pattern: 'coverage/cobertura-coverage.xml'
-                        ]]
-                    )
-                }
-                failure {
-                    echo "❌ Failed at stage: ${env.STAGE_NAME}"
                 }
             }
         }
@@ -582,7 +597,75 @@ spec:
             }
         }
 
+        stage('Pipeline Health Gate') {
+            steps {
+                script {
+                    def threshold = params.HEALTH_GATE_THRESHOLD.toDouble()
+                    if (threshold < 0.0 || threshold > 100.0) {
+                        error('HEALTH_GATE_THRESHOLD must be between 0 and 100.')
+                    }
+
+                    def jobParts = env.JOB_NAME.tokenize('/')
+                    def metricJob = jobParts.size() > 2
+                        ? "${jobParts[0]}/${jobParts[1]}/${jobParts[2..-1].join('%2F')}"
+                        : env.JOB_NAME
+                    def promql = "avg_over_time(default_jenkins_builds_last_build_result{jenkins_job=\"${metricJob}\"}[1h]) * 100"
+
+                    withEnv([
+                        "HEALTH_GATE_QUERY=${promql}",
+                        "HEALTH_GATE_THRESHOLD_VALUE=${threshold}"
+                    ]) {
+                        sh '''
+                            set -eu
+                            mkdir -p reports
+
+                            node <<'NODE'
+const fs = require('fs');
+const endpoint = new URL('/api/v1/query', process.env.PROMETHEUS_URL);
+endpoint.searchParams.set('query', process.env.HEALTH_GATE_QUERY);
+
+fetch(endpoint)
+  .then(async response => {
+    const body = await response.text();
+    fs.writeFileSync('reports/health-gate.json', body);
+    if (!response.ok) {
+      throw new Error(`Prometheus returned HTTP ${response.status}`);
+    }
+  })
+  .catch(error => {
+    console.error(error);
+    process.exit(1);
+  });
+NODE
+
+                            jq -e '.status == "success" and (.data.result | length) == 1' \
+                              reports/health-gate.json > /dev/null
+
+                            success_rate=$(jq -r '.data.result[0].value[1]' reports/health-gate.json)
+                            echo "Pipeline rolling one-hour success rate: ${success_rate}%"
+                            echo "Required threshold: ${HEALTH_GATE_THRESHOLD_VALUE}%"
+
+                            if ! awk -v rate="${success_rate}" -v threshold="${HEALTH_GATE_THRESHOLD_VALUE}" \
+                              'BEGIN { exit !(rate + 0 >= threshold + 0) }'; then
+                              echo 'PIPELINE HEALTH GATE: BLOCKED'
+                              exit 1
+                            fi
+
+                            echo 'PIPELINE HEALTH GATE: PASSED'
+                        '''
+                    }
+                }
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: 'reports/health-gate.json',
+                                     allowEmptyArchive: true
+                }
+            }
+        }
+
         stage('Blue-Green Deploy') {
+            when { branch 'main' }
             steps {
                 sh 'mkdir -p reports'
                 script {
@@ -679,10 +762,17 @@ spec:
     }
 
     post {
-        success {
-            echo "✅ ${env.APP_NAME} passed on ${env.NODE_ENV}"
-        }
         always {
+            script {
+                env.NOTIFY_STATUS = currentBuild.currentResult
+                def notificationExit = sh(
+                    returnStatus: true,
+                    script: 'node scripts/send-build-email.mjs'
+                )
+                if (notificationExit != 0) {
+                    echo "WARNING: Build email notification failed with exit code ${notificationExit}"
+                }
+            }
             archiveArtifacts artifacts: 'npm-debug.log*', allowEmptyArchive: true
         }
     }

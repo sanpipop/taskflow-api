@@ -1,0 +1,94 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#315b8a"/>
+    </marker>
+    <style>
+      .title { font: 700 38px Arial, sans-serif; fill: #17324d; }
+      .label { font: 700 23px Arial, sans-serif; fill: #17324d; }
+      .small { font: 18px Arial, sans-serif; fill: #40566b; }
+      .box { fill: #eef5fb; stroke: #315b8a; stroke-width: 3; rx: 16; }
+      .gate { fill: #fff2cc; stroke: #b57a00; stroke-width: 3; rx: 16; }
+      .deploy { fill: #e8f5e9; stroke: #2e7d32; stroke-width: 3; rx: 16; }
+      .observe { fill: #f3e8ff; stroke: #7b3fa1; stroke-width: 3; rx: 16; }
+      .notify { fill: #fff0f0; stroke: #a33d3d; stroke-width: 3; rx: 16; }
+      .arrow { stroke: #315b8a; stroke-width: 4; fill: none; marker-end: url(#arrow); }
+      .dash { stroke: #6b7e90; stroke-width: 3; stroke-dasharray: 9 8; fill: none; marker-end: url(#arrow); }
+    </style>
+  </defs>
+
+  <rect width="1600" height="900" fill="#ffffff"/>
+  <text x="800" y="60" text-anchor="middle" class="title">Taskflow API End to End CI CD Architecture</text>
+
+  <rect x="55" y="130" width="205" height="105" class="box"/>
+  <text x="157" y="175" text-anchor="middle" class="label">GitHub</text>
+  <text x="157" y="207" text-anchor="middle" class="small">taskflow-api</text>
+
+  <rect x="330" y="130" width="260" height="105" class="box"/>
+  <text x="460" y="175" text-anchor="middle" class="label">Jenkins</text>
+  <text x="460" y="207" text-anchor="middle" class="small">Multibranch Pipeline</text>
+
+  <rect x="660" y="130" width="260" height="105" class="box"/>
+  <text x="790" y="175" text-anchor="middle" class="label">Kubernetes Agent</text>
+  <text x="790" y="207" text-anchor="middle" class="small">Ephemeral CI Pod + DinD</text>
+
+  <rect x="990" y="105" width="550" height="155" class="box"/>
+  <text x="1265" y="150" text-anchor="middle" class="label">Parallel Quality and Security Checks</text>
+  <text x="1265" y="190" text-anchor="middle" class="small">Secrets  SAST  SCA  SBOM</text>
+  <text x="1265" y="222" text-anchor="middle" class="small">Policy  Unit Test  E2E  SonarQube  IaC</text>
+
+  <path d="M260 182 H330" class="arrow"/>
+  <path d="M590 182 H660" class="arrow"/>
+  <path d="M920 182 H990" class="arrow"/>
+
+  <rect x="990" y="345" width="245" height="105" class="box"/>
+  <text x="1112" y="390" text-anchor="middle" class="label">Build Image</text>
+  <text x="1112" y="422" text-anchor="middle" class="small">Immutable Git SHA Tag</text>
+
+  <rect x="1295" y="345" width="245" height="105" class="box"/>
+  <text x="1417" y="390" text-anchor="middle" class="label">Container Scan</text>
+  <text x="1417" y="422" text-anchor="middle" class="small">Trivy Gate</text>
+
+  <path d="M1265 260 V305 H1112 V345" class="arrow"/>
+  <path d="M1235 397 H1295" class="arrow"/>
+
+  <rect x="990" y="540" width="280" height="115" class="gate"/>
+  <text x="1130" y="585" text-anchor="middle" class="label">Pipeline Health Gate</text>
+  <text x="1130" y="618" text-anchor="middle" class="small">Prometheus success rate</text>
+
+  <rect x="1340" y="540" width="200" height="115" class="deploy"/>
+  <text x="1440" y="585" text-anchor="middle" class="label">Production</text>
+  <text x="1440" y="618" text-anchor="middle" class="small">Blue Green Deploy</text>
+
+  <path d="M1417 450 V495 H1130 V540" class="arrow"/>
+  <path d="M1270 597 H1340" class="arrow"/>
+
+  <rect x="55" y="360" width="260" height="115" class="observe"/>
+  <text x="185" y="405" text-anchor="middle" class="label">Prometheus</text>
+  <text x="185" y="438" text-anchor="middle" class="small">Jenkins Metrics and Alerts</text>
+
+  <rect x="385" y="360" width="220" height="115" class="observe"/>
+  <text x="495" y="405" text-anchor="middle" class="label">Grafana</text>
+  <text x="495" y="438" text-anchor="middle" class="small">Pipeline Dashboard</text>
+
+  <path d="M330 220 C250 270 185 300 185 360" class="dash"/>
+  <path d="M315 417 H385" class="arrow"/>
+  <path d="M315 440 C650 520 780 590 990 597" class="dash"/>
+
+  <rect x="55" y="650" width="260" height="115" class="box"/>
+  <text x="185" y="695" text-anchor="middle" class="label">Jenkins Credentials</text>
+  <text x="185" y="728" text-anchor="middle" class="small">GitHub  Kubernetes  Sonar</text>
+  <path d="M185 650 V535 C185 510 350 500 430 235" class="dash"/>
+
+  <rect x="385" y="650" width="260" height="115" class="notify"/>
+  <text x="515" y="695" text-anchor="middle" class="label">Mailpit Email</text>
+  <text x="515" y="728" text-anchor="middle" class="small">Status  Branch  Build URL</text>
+  <path d="M460 235 C500 390 515 525 515 650" class="dash"/>
+
+  <rect x="730" y="700" width="810" height="105" class="deploy"/>
+  <text x="1135" y="742" text-anchor="middle" class="label">Rollback Runbook</text>
+  <text x="1135" y="775" text-anchor="middle" class="small">Validate previous color  Switch Service selector  Health check  Re-deploy immutable image</text>
+  <path d="M1440 655 V700" class="dash"/>
+
+  <text x="800" y="865" text-anchor="middle" class="small">Lab 10 No Mobile Scope</text>
+</svg>
