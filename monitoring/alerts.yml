@@ -1,0 +1,10 @@
+groups:
+  - name: jenkins-slo
+    rules:
+      - alert: JenkinsQueueBacklog
+        expr: jenkins_queue_size_value > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Jenkins build queue has remained backlogged for five minutes
