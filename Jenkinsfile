@@ -60,12 +60,9 @@ spec:
     stages {
         stage('Kubernetes Agent') {
             steps {
-                checkout scm
                 script {
-                    env.GIT_COMMIT = sh(
-                        returnStdout: true,
-                        script: 'git rev-parse HEAD'
-                    ).trim()
+                    def checkoutResult = checkout scm
+                    env.GIT_COMMIT = checkoutResult.GIT_COMMIT
                     echo "Checked out commit: ${env.GIT_COMMIT}"
                 }
                 sh '''
