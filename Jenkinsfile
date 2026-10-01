@@ -668,6 +668,21 @@ NODE
             }
         }
 
+        stage('Deploy - Production') {
+            when {
+                beforeInput true
+                branch 'main'
+            }
+
+            input {
+                message 'Deploy to production with Blue/Green strategy?'
+            }
+
+            steps {
+                echo 'Production deployment approved.'
+            }
+        }
+
         stage('Blue-Green Deploy') {
             when { branch 'main' }
             steps {
@@ -745,21 +760,6 @@ NODE
             when { branch 'develop' }
             steps {
                 sh 'echo deploying to staging...'
-            }
-        }
-
-        stage('Deploy - Production') {
-            when {
-                beforeInput true
-                branch 'main'
-            }
-
-            input {
-                message 'Deploy to production?'
-            }
-
-            steps {
-                sh 'echo deploying to production...'
             }
         }
 
