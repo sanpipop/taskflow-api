@@ -1,0 +1,10 @@
+apiVersion: 1
+
+providers:
+  - name: Lab 09
+    folder: Jenkins Lab 09
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 10
+    options:
+      path: /var/lib/grafana/dashboards

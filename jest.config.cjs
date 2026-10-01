@@ -3,4 +3,8 @@ module.exports = {
   testEnvironment: 'node',
   roots: ['<rootDir>/test'],
   clearMocks: true,
+
+  coverageProvider: 'v8',
+  coverageDirectory: 'coverage',
+  coverageReporters: ['text', 'cobertura', 'lcovonly'],
 };

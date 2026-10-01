@@ -1,0 +1,44 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: taskflow
+      POSTGRES_PASSWORD: taskflow
+      POSTGRES_DB: taskflow
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U taskflow -d taskflow"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+    networks:
+      - jenkins-net
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.e2e
+    environment:
+      PORT: 8080
+      DATABASE_URL: postgresql://taskflow:taskflow@postgres:5432/taskflow
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://localhost:8080/ready').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+        ]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+    networks:
+      jenkins-net:
+        aliases:
+          - taskflow-api-e2e
+
+networks:
+  jenkins-net:
+    external: true

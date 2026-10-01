@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1900" height="1000" viewBox="0 0 1900 1000">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#315b8a"/></marker>
+    <style>
+      .title{font:700 40px Arial,sans-serif;fill:#17324d}.subtitle{font:20px Arial,sans-serif;fill:#526a80}.lane{font:700 18px Arial,sans-serif;fill:#315b8a;letter-spacing:1px}.label{font:700 21px Arial,sans-serif;fill:#17324d}.small{font:17px Arial,sans-serif;fill:#40566b}.tiny{font:15px Arial,sans-serif;fill:#526a80}.step{fill:#315b8a}.stepText{font:700 15px Arial,sans-serif;fill:#fff}.box{fill:#eef5fb;stroke:#315b8a;stroke-width:3}.gate{fill:#fff2cc;stroke:#b57a00;stroke-width:3}.deploy{fill:#e8f5e9;stroke:#2e7d32;stroke-width:3}.support{fill:#f8fafc;stroke:#9aabba;stroke-width:2}.observe{fill:#f3e8ff;stroke:#7b3fa1;stroke-width:2.5}.notify{fill:#fff0f0;stroke:#a33d3d;stroke-width:2.5}.rollback{fill:#eef8ee;stroke:#2e7d32;stroke-width:2.5}.arrow{stroke:#315b8a;stroke-width:4;fill:none;marker-end:url(#arrow)}.innerArrow{stroke:#7b3fa1;stroke-width:3;fill:none;marker-end:url(#arrow)}
+    </style>
+  </defs>
+  <rect width="1900" height="1000" fill="#fff"/>
+  <text x="950" y="58" text-anchor="middle" class="title">Taskflow API — End-to-End CI/CD Architecture</text>
+  <text x="950" y="92" text-anchor="middle" class="subtitle">Lab 10 scope: API pipeline only (Mobile excluded)</text>
+  <rect x="35" y="125" width="1830" height="300" rx="22" fill="#f7fbff" stroke="#d8e5f0" stroke-width="2"/>
+  <text x="65" y="160" class="lane">PIPELINE EXECUTION ORDER</text>
+
+  <circle cx="130" cy="205" r="17" class="step"/><text x="130" y="211" text-anchor="middle" class="stepText">1</text>
+  <rect x="45" y="230" width="170" height="135" rx="15" class="box"/><text x="130" y="278" text-anchor="middle" class="label">GitHub</text><text x="130" y="310" text-anchor="middle" class="small">taskflow-api</text><text x="130" y="338" text-anchor="middle" class="tiny">Push / SCM</text>
+  <circle cx="355" cy="205" r="17" class="step"/><text x="355" y="211" text-anchor="middle" class="stepText">2</text>
+  <rect x="260" y="230" width="190" height="135" rx="15" class="box"/><text x="355" y="278" text-anchor="middle" class="label">Jenkins</text><text x="355" y="310" text-anchor="middle" class="small">Multibranch</text><text x="355" y="338" text-anchor="middle" class="tiny">Orchestrates pipeline</text>
+  <circle cx="580" cy="205" r="17" class="step"/><text x="580" y="211" text-anchor="middle" class="stepText">3</text>
+  <rect x="495" y="230" width="170" height="135" rx="15" class="box"/><text x="580" y="278" text-anchor="middle" class="label">Kubernetes</text><text x="580" y="310" text-anchor="middle" class="small">Dynamic Agent</text><text x="580" y="338" text-anchor="middle" class="tiny">Ephemeral Pod + DinD</text>
+  <circle cx="810" cy="205" r="17" class="step"/><text x="810" y="211" text-anchor="middle" class="stepText">4</text>
+  <rect x="710" y="205" width="200" height="185" rx="15" class="box"/><text x="810" y="247" text-anchor="middle" class="label">Quality &amp;</text><text x="810" y="275" text-anchor="middle" class="label">Security Gates</text><text x="810" y="307" text-anchor="middle" class="tiny">Parallel checks + Policy</text><text x="810" y="333" text-anchor="middle" class="tiny">E2E • SonarQube</text><text x="810" y="359" text-anchor="middle" class="tiny">IaC • Terraform Plan</text>
+  <circle cx="1055" cy="205" r="17" class="step"/><text x="1055" y="211" text-anchor="middle" class="stepText">5</text>
+  <rect x="955" y="220" width="200" height="155" rx="15" class="box"/><text x="1055" y="265" text-anchor="middle" class="label">Package &amp; Scan</text><text x="1055" y="300" text-anchor="middle" class="small">Build Git SHA image</text><text x="1055" y="330" text-anchor="middle" class="tiny">Trivy security gate</text>
+  <circle cx="1275" cy="205" r="17" class="step"/><text x="1275" y="211" text-anchor="middle" class="stepText">6</text>
+  <rect x="1200" y="205" width="150" height="185" rx="15" class="box"/><text x="1275" y="246" text-anchor="middle" class="label">Conditional</text><text x="1275" y="273" text-anchor="middle" class="label">IaC</text><text x="1275" y="307" text-anchor="middle" class="tiny">APPLY + Ansible</text><text x="1275" y="333" text-anchor="middle" class="tiny">or DESTROY</text><text x="1275" y="359" text-anchor="middle" class="tiny">Skipped for PLAN</text>
+  <circle cx="1460" cy="205" r="17" class="step"/><text x="1460" y="211" text-anchor="middle" class="stepText">7</text>
+  <rect x="1390" y="215" width="140" height="165" rx="15" class="gate"/><text x="1460" y="255" text-anchor="middle" class="label">Health Gate</text><text x="1460" y="290" text-anchor="middle" class="tiny">Prometheus</text><text x="1460" y="316" text-anchor="middle" class="tiny">rolling success</text><text x="1460" y="342" text-anchor="middle" class="tiny">rate</text>
+  <circle cx="1620" cy="205" r="17" class="step"/><text x="1620" y="211" text-anchor="middle" class="stepText">8</text>
+  <rect x="1570" y="230" width="100" height="135" rx="15" class="gate"/><text x="1620" y="278" text-anchor="middle" class="small">Approve</text><text x="1620" y="310" text-anchor="middle" class="tiny">Main</text><text x="1620" y="336" text-anchor="middle" class="tiny">Manual</text>
+  <circle cx="1785" cy="205" r="17" class="step"/><text x="1785" y="211" text-anchor="middle" class="stepText">9</text>
+  <rect x="1710" y="215" width="150" height="165" rx="15" class="deploy"/><text x="1785" y="260" text-anchor="middle" class="label">Blue / Green</text><text x="1785" y="290" text-anchor="middle" class="small">Deploy</text><text x="1785" y="322" text-anchor="middle" class="tiny">Health check</text><text x="1785" y="348" text-anchor="middle" class="tiny">Switch traffic</text>
+  <path d="M215 297 H260" class="arrow"/><path d="M450 297 H495" class="arrow"/><path d="M665 297 H710" class="arrow"/><path d="M910 297 H955" class="arrow"/><path d="M1155 297 H1200" class="arrow"/><path d="M1350 297 H1390" class="arrow"/><path d="M1530 297 H1570" class="arrow"/><path d="M1670 297 H1710" class="arrow"/>
+
+  <rect x="35" y="465" width="1830" height="425" rx="22" fill="#fbfcfd" stroke="#dfe5ea" stroke-width="2"/>
+  <text x="65" y="505" class="lane">SUPPORTING SERVICES (NOT ADDITIONAL PIPELINE STEPS)</text>
+  <rect x="70" y="550" width="420" height="250" rx="18" class="support"/><text x="280" y="592" text-anchor="middle" class="label">Jenkins Integrations</text>
+  <rect x="95" y="625" width="170" height="115" rx="13" class="box"/><text x="180" y="668" text-anchor="middle" class="small">Credentials</text><text x="180" y="698" text-anchor="middle" class="tiny">GitHub • Sonar</text><text x="180" y="722" text-anchor="middle" class="tiny">Kubernetes token</text>
+  <rect x="290" y="625" width="170" height="115" rx="13" class="notify"/><text x="375" y="668" text-anchor="middle" class="small">Mailpit Email</text><text x="375" y="698" text-anchor="middle" class="tiny">Status • Branch</text><text x="375" y="722" text-anchor="middle" class="tiny">Build URL</text>
+  <text x="280" y="770" text-anchor="middle" class="tiny">Used during checkout and analysis</text>
+  <text x="280" y="793" text-anchor="middle" class="tiny">Agent provisioning and post actions</text>
+  <rect x="540" y="550" width="600" height="250" rx="18" class="support"/><text x="840" y="592" text-anchor="middle" class="label">Observability and Health Data</text>
+  <rect x="585" y="625" width="210" height="115" rx="13" class="observe"/><text x="690" y="668" text-anchor="middle" class="small">Prometheus</text><text x="690" y="698" text-anchor="middle" class="tiny">Jenkins metrics</text><text x="690" y="722" text-anchor="middle" class="tiny">Alerts + gate query</text>
+  <rect x="885" y="625" width="210" height="115" rx="13" class="observe"/><text x="990" y="668" text-anchor="middle" class="small">Grafana</text><text x="990" y="698" text-anchor="middle" class="tiny">Pipeline dashboard</text><path d="M795 682 H885" class="innerArrow"/>
+  <text x="840" y="775" text-anchor="middle" class="tiny">Prometheus supplies the rolling success rate used by Pipeline Health Gate</text>
+  <rect x="1190" y="550" width="635" height="250" rx="18" class="rollback"/><text x="1507" y="592" text-anchor="middle" class="label">Production Recovery</text><text x="1507" y="640" text-anchor="middle" class="small">Rollback Runbook</text>
+  <text x="1240" y="690" class="tiny">1. Confirm previous Blue/Green color</text><text x="1240" y="722" class="tiny">2. Restore Kubernetes Service selector</text><text x="1525" y="690" class="tiny">3. Run health check</text><text x="1525" y="722" class="tiny">4. Re-deploy immutable Git SHA image</text><text x="1507" y="775" text-anchor="middle" class="tiny">Used only when production verification fails</text>
+  <rect x="610" y="925" width="680" height="42" rx="21" fill="#eef5fb" stroke="#b8ccdc"/><path d="M645 946 H710" class="arrow"/><text x="730" y="952" class="tiny">Solid arrows show execution order. Lower panels describe supporting capabilities.</text>
+</svg>

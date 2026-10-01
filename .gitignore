@@ -5,3 +5,14 @@ coverage/
 reports/
 *.log
 .DS_Store
+
+playwright-report/
+test-results/
+
+# Lab 08: Terraform working data and generated credentials/plans must never be committed.
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+infra/ansible/.lab08_ssh
+infra/ansible/.lab08_ssh.pub
