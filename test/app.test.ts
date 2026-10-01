@@ -25,7 +25,10 @@ describe('Taskflow API', () => {
   test('GET /health returns ok without database', async () => {
     const response = await request(createApp(mockService())).get('/health');
     expect(response.statusCode).toBe(200);
-    expect(response.body).toEqual({ status: 'ok' });
+    expect(response.body).toEqual({
+      status: 'ok',
+      service: 'taskflow-api',
+    });
   });
 
   test('GET /tasks returns tasks', async () => {
